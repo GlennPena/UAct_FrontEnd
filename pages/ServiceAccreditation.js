@@ -7,14 +7,15 @@ import styles from '../styles';
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export default function ServiceAccreditation() {
-    const [programs, setPrograms] = useState([]);
-    const [expandedProgramId, setExpandedProgramId] = useState(null);
-    const [expandedStudentId, setExpandedStudentId] = useState(null);
+    const [serviceLogs, setServiceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch programs with service logs
-    const fetchPrograms = async () => {
+    useEffect(() => {
+        fetchLogs();
+    }, []);
+
+    const fetchLogs = async () => {
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem('userToken');
@@ -28,30 +29,16 @@ export default function ServiceAccreditation() {
                 headers: { Authorization: `Token ${token}` }
             });
 
-            // response.data should be structured like: [{id, name, applicants: [{id, program, facilitator, date, status}]}]
-            setPrograms(response.data);
+            setServiceLogs(response.data || []);
         } catch (err) {
-            console.error("Error fetching service logs:", err.response?.data || err.message);
-            setError("Failed to load service accreditation records.");
+            console.error("Error fetching logs:", err.response?.data || err.message);
+            setError("Failed to load service logs.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchPrograms();
-    }, []);
-
-    const toggleProgram = (id) => {
-        setExpandedProgramId(expandedProgramId === id ? null : id);
-        setExpandedStudentId(null);
-    };
-
-    const toggleStudent = (id) => {
-        setExpandedStudentId(expandedStudentId === id ? null : id);
-    };
-
-    const handleApprove = async (programId, studentId) => {
+    const handleApprove = async (logId) => {
         try {
             const token = await AsyncStorage.getItem('userToken');
             if (!token) {
@@ -59,32 +46,24 @@ export default function ServiceAccreditation() {
                 return;
             }
 
-            // Call backend API to update status
-            await axios.patch(`${API_BASE_URL}/logs/${studentId}/`, { status: "completed" }, {
+            await axios.post(`${API_BASE_URL}/logs/${logId}/approve/`, {}, {
                 headers: { Authorization: `Token ${token}` }
             });
 
-            // Update local state
-            setPrograms(prevPrograms =>
-                prevPrograms.map(program => {
-                    if (program.id === programId) {
-                        return {
-                            ...program,
-                            applicants: program.applicants.map(student => {
-                                if (student.id === studentId) {
-                                    return { ...student, status: "Completed" };
-                                }
-                                return student;
-                            })
-                        };
-                    }
-                    return program;
-                })
+            setServiceLogs(prevLogs =>
+                prevLogs.map(log =>
+                    log.id === logId ? { ...log, status: "completed", approved: true } : log
+                )
             );
         } catch (err) {
-            console.error("Error approving service:", err.response?.data || err.message);
-            Alert.alert("Error", "Failed to approve service.");
+            console.error("Error approving log:", err.response?.data || err.message);
+            Alert.alert("Error", "Failed to approve log.");
         }
+    };
+
+    const formatStatus = (status) => {
+        if (!status) return 'N/A';
+        return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     };
 
     if (loading) {
@@ -103,8 +82,64 @@ export default function ServiceAccreditation() {
         );
     }
 
+    if (serviceLogs.length === 0) {
+        return (
+            <View style={[styles.container, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: 'gray', marginBottom: 10 }}>
+                    No service logs found.
+                </Text>
+            </View>
+        );
+    }
+
+    const LogEntry = ({ log }) => {
+        const isCompleted = log.status && log.status.toLowerCase() === "completed" || log.approved;
+
+        return (
+            <View key={log.id} style={{
+                backgroundColor: '#fff',
+                padding: 15,
+                borderRadius: 12,
+                marginBottom: 15,
+                elevation: 3,
+                borderWidth: 1,
+                borderColor: '#ececec'
+            }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 5 }}>
+                    👤 {log.student_full_name}
+                </Text>
+                <Text style={{ fontSize: 16, marginBottom: 5 }}>
+                    Program: {log.program_name} | Facilitator: {log.facilitator_name || 'N/A'}
+                </Text>
+                <Text style={{ fontSize: 14, marginBottom: 10 }}>
+                    Required Hours: {log.program_hours || 'N/A'}
+                </Text>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                    <Text style={{ fontWeight: 'bold', color: isCompleted ? 'green' : 'orange' }}>
+                        Status: {formatStatus(log.status)}
+                    </Text>
+                    <TouchableOpacity
+                        style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 15,
+                            borderRadius: 8,
+                            backgroundColor: isCompleted ? "gray" : "green"
+                        }}
+                        disabled={isCompleted}
+                        onPress={() => handleApprove(log.id)}
+                    >
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                            {isCompleted ? "Approved" : "Approve Log"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
     return (
-        <View style={{ flex: 1, paddingTop: 40, backgroundColor: '#f0f0f0', alignItems: 'center' }}>
+        <View style={[styles.container, { flex: 1, paddingTop: 40, alignItems: 'center' }]}>
             <View style={{
                 width: '50%',
                 flex: 1,
@@ -114,95 +149,24 @@ export default function ServiceAccreditation() {
                 borderRadius: 12,
                 overflow: 'hidden'
             }}>
-                {/* Header */}
+                {/* HEADER */}
                 <View style={{
                     flexDirection: 'row',
-                    justifyContent: 'flex-start',
-                    paddingVertical: 10,
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                     paddingHorizontal: 20,
+                    paddingVertical: 10,
                     backgroundColor: '#f0f0f0',
+                    elevation: 4,
                     borderBottomWidth: 1,
                     borderBottomColor: '#e6e6e6'
                 }}>
-                    <Text style={{ fontSize: 26, fontWeight: 'bold' }}>Service Accreditation</Text>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold' }}>Service Logs</Text>
                 </View>
 
                 <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingVertical: 20 }}>
-                    {programs.map((program) => (
-                        <View key={program.id} style={{ marginBottom: expandedProgramId === program.id ? 0 : 20 }}>
-                            {/* Program Card */}
-                            <TouchableOpacity
-                                onPress={() => toggleProgram(program.id)}
-                                style={{
-                                    backgroundColor: '#fff',
-                                    padding: 15,
-                                    borderRadius: 12,
-                                    borderWidth: 1,
-                                    borderColor: '#ececec',
-                                    marginBottom: 0,
-                                }}
-                            >
-                                <Text style={{ fontSize: 18, fontWeight: 'bold' }}>{program.name}</Text>
-                            </TouchableOpacity>
-
-                            {/* Students Block */}
-                            {expandedProgramId === program.id && (
-                                <View style={{
-                                    borderWidth: 1,
-                                    borderColor: '#ccc',
-                                    borderTopWidth: 0,
-                                    borderBottomLeftRadius: 12,
-                                    borderBottomRightRadius: 12,
-                                    backgroundColor: '#f9f9f9',
-                                    marginHorizontal: 10,
-                                    marginBottom: 20,
-                                }}>
-                                    {program.applicants.map((student, index) => (
-                                        <View key={student.id}>
-                                            <TouchableOpacity
-                                                onPress={() => toggleStudent(student.id)}
-                                                style={{ padding: 10 }}
-                                            >
-                                                <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
-                                                    {student.program} ({student.status})
-                                                </Text>
-                                            </TouchableOpacity>
-
-                                            {/* Student Details */}
-                                            {expandedStudentId === student.id && (
-                                                <View style={{ paddingLeft: 10, paddingBottom: 10 }}>
-                                                    <Text>Program: {student.program}</Text>
-                                                    <Text>Facilitator: {student.facilitator}</Text>
-                                                    <Text>Date: {student.date}</Text>
-                                                    <Text>Status: {student.status}</Text>
-
-                                                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
-                                                        <TouchableOpacity
-                                                            style={{
-                                                                paddingVertical: 6,
-                                                                paddingHorizontal: 15,
-                                                                borderRadius: 8,
-                                                                backgroundColor: student.status === "Completed" ? "gray" : "green"
-                                                            }}
-                                                            disabled={student.status === "Completed"}
-                                                            onPress={() => handleApprove(program.id, student.id)}
-                                                        >
-                                                            <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-                                                                {student.status === "Completed" ? "Completed" : "Approve"}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                            {index < program.applicants.length - 1 && (
-                                                <View style={{ height: 1, backgroundColor: '#ccc', marginHorizontal: 10 }} />
-                                            )}
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
+                    {serviceLogs.map((log) => (
+                        <LogEntry key={log.id} log={log} />
                     ))}
                 </ScrollView>
             </View>
