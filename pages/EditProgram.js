@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import styles from '../styles';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/programs';
 
 export default function EditProgram() {
     const navigation = useNavigation();

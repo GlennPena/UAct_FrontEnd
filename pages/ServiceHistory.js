@@ -1,3 +1,5 @@
+// servicehistory.js - CORRECTED VERSION
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Alert, Button } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -6,7 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import styles from '../styles'; 
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api'; 
+// 🎯 API_BASE_URL is correct: http://127.0.0.1:8000/api/service-history/ 
+const API_BASE_URL = 'http://127.0.0.1:8000/api/service-history/'; 
 
 export default function ApplicationRecords() {
     const navigation = useNavigation();
@@ -29,9 +32,9 @@ export default function ApplicationRecords() {
                 }
 
                 // 2. Fetch the student's applications using the secured endpoint
-                // The backend automatically filters this list to the logged-in student's applications.
+                // ✅ FIX: Removed the incorrect '/applications/' from the URL
                 const response = await axios.get(
-                    `${API_BASE_URL}/applications/`,
+                    API_BASE_URL, 
                     {
                         headers: {
                             'Authorization': `Token ${token}`
@@ -48,6 +51,7 @@ export default function ApplicationRecords() {
                 if (err.response && err.response.status === 401) {
                     errorMessage = "Session expired. Please log in again.";
                 } else if (err.response) {
+                    // This handles the 404 error we saw previously
                     errorMessage = `Server Error (${err.response.status}): ${JSON.stringify(err.response.data)}`;
                 }
                 
@@ -67,14 +71,15 @@ export default function ApplicationRecords() {
             <Text style={styles.header}>
                 Program: {item.program.name} 
             </Text>
+            {/* ✅ FIX: Changed submission_date to submitted_at */}
             <Text style={styles.detailText}>
-                Submitted On: {new Date(item.submission_date).toLocaleDateString()}
+                Submitted On: {new Date(item.submitted_at).toLocaleDateString()}
             </Text>
             <Text style={styles.detailText}>
                 Required Hours: {item.program.hours}
             </Text>
             <Text style={styles.detailText}>
-                Status: **{item.status.toUpperCase()}**
+                Status: **{(item.current_status || 'N/A').toUpperCase()}**
             </Text>
         </View>
     );
