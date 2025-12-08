@@ -39,10 +39,10 @@ export default function LoginPage() {
 
             if (data.is_admin) {
                 Alert.alert('Login Successful', `Welcome Admin ${data.username}`);
-                navigation.navigate('AdminDashboard');
+                navigation.replace('AdminDashboard');
             } else if (data.is_student) {
                 Alert.alert('Login Successful', `Welcome Student ${data.username}`);
-                navigation.navigate('StudentDashboard');
+                navigation.replace('StudentDashboard');
             } else {
                 Alert.alert('Error', 'Unknown user role. Access denied.');
             }

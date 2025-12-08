@@ -67,4 +67,50 @@ export default StyleSheet.create({
         width: 200,
     },
 
+    programBarItem: {
+    marginBottom: 15,
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    },
+
+    
+    programNameText: {
+        fontWeight: 'bold',
+        fontSize: 16,
+        color: '#021c2eff',
+    },
+    programCountText: {
+        fontSize: 14,
+        marginBottom: 5,
+        color: '#666',
+    },
+    programBarTrack: {
+        height: 12,
+        backgroundColor: '#e0e0e0', // Track color (background of the bar)
+        borderRadius: 6,
+        overflow: 'hidden', // Clip the filling bar
+    },
+    // Ensure you have these basic card styles too:
+    dashboardCard: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 15,
+        marginVertical: 10,
+        marginHorizontal: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 10,
+        borderBottomWidth: 2,
+        borderBottomColor: '#021c2eff',
+        paddingBottom: 5,
+    }
+
 });
